@@ -1,0 +1,26 @@
+https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-cli-tutorial-fargate.html
+
+cluster = cypressecs
+config_name = cypressecs
+role_name = ecsTaskExecutionRole
+Access_key = AKIA3CYKIVHLI3MPUXUY
+Secret_key = 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
+profile_name = cypressecsprofile
+region = eu-west-1
+access_key = AKIA3CYKIVHLI3MPUXUY
+secret = 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
+
+CREATE CLUSTER CONFIG:
+ecs-cli configure --cluster cypressecs --default-launch-type EC2 --config-name cypressecs --region eu-west-1
+
+CREATE CLI PROFILE
+ecs-cli configure profile --access-key AKIA3CYKIVHLI3MPUXUY --secret-key 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 --profile-name cypressecsprofile
+
+CREATE CLUSTER
+ecs-cli up --keypair ba --capability-iam --size 2 --instance-type t2.medium --cluster-config cypressecs --ecs-profile cypressecsprofile
+
+DEPLOY CLUSTER
+ecs-cli compose --file './e2e/docker-compose.aws.yml' up --create-log-groups --cluster-config cypressecs --ecs-profile cypressecsprofile
+
+VIEW CLUSTER
+ecs-cli ps --cluster-config cypressecs --ecs-profile cypressecsprofile

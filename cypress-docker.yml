@@ -1,0 +1,401 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  StackInfo:
+    Type: String
+
+Resources:
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${StackInfo}/e2e"
+
+  CypressLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${StackInfo}/cypress"
+
+  SentimentalyzerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${StackInfo}/sentimentalyzer"
+
+  CloudMap:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Description: Service Map for Docker Compose project!Sub "${StackInfo}
+      Name: !Sub "${StackInfo}.local"
+      Vpc: vpc-8016c2f9
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${StackInfo}"
+      Tags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+
+  CypressService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - SentimentalyzerService
+    Properties:
+      Cluster:
+        Fn::GetAtt:
+          - Cluster
+          - Arn
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DeploymentController:
+        Type: ECS
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - Ref: DefaultNetwork
+          Subnets:
+            - subnet-086a4ae3e9cd7d91b
+            - subnet-0f961828417a4b761
+      PlatformVersion: 1.4.0
+      PropagateTags: SERVICE
+      SchedulingStrategy: REPLICA
+      ServiceRegistries:
+        - RegistryArn:
+            Fn::GetAtt:
+              - CypressServiceDiscoveryEntry
+              - Arn
+      Tags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+        - Key: com.docker.compose.service
+          Value: cypress
+      TaskDefinition:
+        Ref: CypressTaskDefinition
+
+  CypressServiceDiscoveryEntry:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: '"cypress" service discovery entry in Cloud Map'
+      DnsConfig:
+        DnsRecords:
+          - TTL: 60
+            Type: A
+        RoutingPolicy: MULTIVALUE
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name: cypress
+      NamespaceId:
+        Ref: CloudMap
+
+  CypressTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Command:
+            - eu-west-1.compute.internal
+            - !Sub "${StackInfo}.local"
+          Essential: false
+          Image: docker/ecs-searchdomain-sidecar:1.0
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${StackInfo}/cypress"
+              awslogs-region: eu-west-1
+              awslogs-stream-prefix: web
+          Name: Cypress_ResolvConf_InitContainer
+        - DependsOn:
+            - Condition: SUCCESS
+              ContainerName: Cypress_ResolvConf_InitContainer
+          Environment:
+            - Name: CYPRESS_baseUrl
+              Value: http://sentimentalyzer:8080
+          Essential: true
+          Image: 761841363414.dkr.ecr.eu-west-1.amazonaws.com/aws_cypress:latest
+          LinuxParameters: { }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${StackInfo}/cypress"
+              awslogs-region: eu-west-1
+              awslogs-stream-prefix: web
+          Name: cypress
+          WorkingDirectory: /e2e
+      Cpu: "256"
+      ExecutionRoleArn:
+        Ref: CypressTaskExecutionRole
+      Family: !Sub "${StackInfo}-cypress"
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+
+  CypressTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Condition: { }
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      Tags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+        - Key: com.docker.compose.service
+          Value: cypress
+
+  Default8080Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      CidrIp: 0.0.0.0/0
+      Description: sentimentalyzer:8080/tcp on default network
+      FromPort: 8080
+      GroupId:
+        Ref: DefaultNetwork
+      IpProtocol: TCP
+      ToPort: 8080
+
+  DefaultNetwork:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "${StackInfo} Security Group for default network"
+      Tags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+        - Key: com.docker.compose.network
+          Value: default
+      VpcId: vpc-8016c2f9
+
+  DefaultNetworkIngress:
+    Properties:
+      Description: Allow communication within network default
+      GroupId:
+        Ref: DefaultNetwork
+      IpProtocol: "-1"
+      SourceSecurityGroupId:
+        Ref: DefaultNetwork
+    Type: AWS::EC2::SecurityGroupIngress
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: "true"
+      Scheme: internet-facing
+      Subnets:
+        - subnet-086a4ae3e9cd7d91b
+        - subnet-0f961828417a4b761
+      Tags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+      Type: network
+
+  MydataAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      AccessPointTags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+        - Key: com.docker.compose.volume
+          Value: mydata
+        - Key: Name
+          Value: !Sub "${StackInfo}_mydata"
+      FileSystemId:
+        Ref: MydataFilesystem
+
+  MydataFilesystem:
+    Type: AWS::EFS::FileSystem
+    DeletionPolicy: Retain
+    Properties:
+      Encrypted: true
+      FileSystemTags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+        - Key: com.docker.compose.volume
+          Value: mydata
+        - Key: Name
+          Value: !Sub "${StackInfo}_mydata"
+
+  MydataNFSMountTargetOnSubnet086a4ae3e9cd7d91b:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: MydataFilesystem
+      SecurityGroups:
+        - Ref: DefaultNetwork
+      SubnetId: subnet-086a4ae3e9cd7d91b
+
+  MydataNFSMountTargetOnSubnet0f961828417a4b761:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: MydataFilesystem
+      SecurityGroups:
+        - Ref: DefaultNetwork
+      SubnetId: subnet-0f961828417a4b761
+
+  SentimentalyzerService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - SentimentalyzerTCP8080Listener
+    Properties:
+      Cluster:
+        Fn::GetAtt:
+          - Cluster
+          - Arn
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DeploymentController:
+        Type: ECS
+      DesiredCount: 1
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: sentimentalyzer
+          ContainerPort: 8080
+          TargetGroupArn:
+            Ref: SentimentalyzerTCP8080TargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - Ref: DefaultNetwork
+          Subnets:
+            - subnet-086a4ae3e9cd7d91b
+            - subnet-0f961828417a4b761
+      PlatformVersion: 1.4.0
+      PropagateTags: SERVICE
+      SchedulingStrategy: REPLICA
+      ServiceRegistries:
+        - RegistryArn:
+            Fn::GetAtt:
+              - SentimentalyzerServiceDiscoveryEntry
+              - Arn
+      Tags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+        - Key: com.docker.compose.service
+          Value: sentimentalyzer
+      TaskDefinition:
+        Ref: SentimentalyzerTaskDefinition
+
+  SentimentalyzerServiceDiscoveryEntry:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: '"sentimentalyzer" service discovery entry in Cloud Map'
+      DnsConfig:
+        DnsRecords:
+          - TTL: 60
+            Type: A
+        RoutingPolicy: MULTIVALUE
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name: sentimentalyzer
+      NamespaceId:
+        Ref: CloudMap
+
+  SentimentalyzerTCP8080Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn:
+                  Ref: SentimentalyzerTCP8080TargetGroup
+          Type: forward
+      LoadBalancerArn:
+        Ref: LoadBalancer
+      Port: 8080
+      Protocol: TCP
+
+  SentimentalyzerTCP8080TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 8080
+      Protocol: TCP
+      Tags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+      TargetType: ip
+      VpcId: vpc-8016c2f9
+
+  SentimentalyzerTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Command:
+            - eu-west-1.compute.internal
+            - !Sub "${StackInfo}.local"
+          Essential: false
+          Image: docker/ecs-searchdomain-sidecar:1.0
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${StackInfo}/sentimentalyzer"
+              awslogs-region: eu-west-1
+              awslogs-stream-prefix: web
+          Name: Sentimentalyzer_ResolvConf_InitContainer
+        - DependsOn:
+            - Condition: SUCCESS
+              ContainerName: Sentimentalyzer_ResolvConf_InitContainer
+          Environment:
+            - Name: PORT
+              Value: "8080"
+          Essential: true
+          Image: 761841363414.dkr.ecr.eu-west-1.amazonaws.com/aws_sentimentalyzer:latest
+          LinuxParameters: { }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${StackInfo}/sentimentalyzer"
+              awslogs-region: eu-west-1
+              awslogs-stream-prefix: web
+          Name: sentimentalyzer
+          PortMappings:
+            - ContainerPort: 8080
+              HostPort: 8080
+              Protocol: tcp
+      Cpu: "256"
+      ExecutionRoleArn:
+        Ref: SentimentalyzerTaskExecutionRole
+      Family: !Sub "${StackInfo}-sentimentalyzer"
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+  SentimentalyzerTaskExecutionRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Condition: { }
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      Tags:
+        - Key: com.docker.compose.project
+          Value: !Sub "${StackInfo}"
+        - Key: com.docker.compose.service
+          Value: sentimentalyzer
+    Type: AWS::IAM::Role
+
+Outputs:
+  LoadBalancerUrl:
+    Description: Url to call web service
+    Value: !GetAtt LoadBalancer.DNSName
