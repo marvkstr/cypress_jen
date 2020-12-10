@@ -8,9 +8,7 @@ pipeline {
     stage('e2e') {
       steps {
         echo "running e2e-tests"
-        sh 'ls -lah'
-        sh 'pwd'
-        sh 'which docker-compose'
+        sh 'which docker'
         sh 'sh e2e_test.sh'
       }
     }
