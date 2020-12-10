@@ -10,7 +10,7 @@ pipeline {
         echo "running e2e-tests"
         sh 'ls -lah'
         sh 'pwd'
-        sh 'cat e2e_test.sh'
+        sh 'which docker-compose'
         sh 'sh e2e_test.sh'
       }
     }
