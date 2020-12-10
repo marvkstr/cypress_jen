@@ -1,5 +1,9 @@
 pipeline {
-  agent any
+  agent {
+      docker {
+        image 'docker:latest'
+      }
+  }
   stages {
     stage('e2e') {
       steps {
