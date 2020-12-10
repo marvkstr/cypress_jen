@@ -1,14 +1,14 @@
 pipeline {
-  agent {
-    docker {
-      image 'docker:latest'
-    }
 
   }
   stages {
     stage('error') {
-      steps {
-        sh 'sh \'./e2e_test.sh\''
+        agent {
+            docker {
+              image 'docker:latest'
+        }
+        steps {
+            sh 'sh \'./e2e_test.sh\''
       }
     }
 
