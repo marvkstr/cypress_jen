@@ -9,7 +9,7 @@ pipeline {
         }
         steps {
             echo "running e2e-tests"
-            sh './e2e_test.sh
+            sh './e2e_test.sh'
       }
     }
 
