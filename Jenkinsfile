@@ -8,7 +8,8 @@ pipeline {
               image 'docker:latest'
         }
         steps {
-            sh 'sh \'./e2e_test.sh\''
+            echo "running e2e-tests"
+            sh './e2e_test.sh
       }
     }
 
