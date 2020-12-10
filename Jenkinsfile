@@ -1,7 +1,12 @@
 pipeline {
-  agent any
+  agent {
+    docker {
+      image 'docker'
+    }
+
+  }
   stages {
-    stage('') {
+    stage('error') {
       steps {
         sh 'sh \'./e2e_test.sh\''
       }
