@@ -1,4 +1,3 @@
-def DOCkER_ARGS
 
 def AWS_REGION = "eu-west-1"
 def AWS_ACCOUNT_ID = "761841363414"
@@ -18,21 +17,23 @@ pipeline {
     }
 
     stage('build and push cypress image') {
-        steps {
-            echo "standing by"
-        }
+      steps {
+        echo "standing by"
+      }
     }
 
     stage('push images') {
-        steps {
-            echo "waiting for instructions"
-        }
+      steps {
+        echo "waiting for instructions"
+      }
     }
 
     stage ('deploy cloudformation') {
-        steps {
-            echo "waiting for instructions"
+      steps {
+        withAWS(credentials: 'aws_credentials', region: 'us-east-1') {
+          sh 'aws iam get-user'
         }
+      }
     }
   }
 }
