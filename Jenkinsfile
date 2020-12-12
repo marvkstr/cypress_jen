@@ -40,5 +40,15 @@ pipeline {
         }
       }
     }
+
+    stage('create or update stack') {
+      steps {
+        script{
+          withAWS(credentials: 'aws-credentials', region: 'eu-west-1') {
+            def outputs = cfnUpdate(stack: 'senti_aws', template: './cypress-docker.yml', params:['StackInfo=githubActionsStack'])
+          }
+        }
+      }
+    }
   }
 }
