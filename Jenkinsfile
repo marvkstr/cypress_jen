@@ -11,20 +11,20 @@ pipeline {
   stages {
     stage('e2e') {
       steps {
-        echo "running e2e-tests"
+        echo 'running e2e-tests'
         sh 'sh e2e_test.sh'
       }
     }
 
     stage('build and push cypress image') {
       steps {
-        echo "standing by"
+        echo 'standing by'
       }
     }
 
     stage('push images') {
       steps {
-        echo "waiting for instructions"
+        echo 'waiting for instructions'
       }
     }
 
