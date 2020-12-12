@@ -23,7 +23,7 @@ pipeline {
       steps {
         script {
           docker.withRegistry("https://${REGISTRY}/${CYPRESS_REPO}", "ecr:eu-west-1:aws-credentials") {
-            def image = docker.build("${REGISTRY}/${CYPRESS_REPO}:${IMAGE_TAG}", "./cypress.dk")
+            def image = docker.build("${REGISTRY}/${CYPRESS_REPO}:${IMAGE_TAG}", "-f ./cypress.dk .")
             image.push()
           }
         }
