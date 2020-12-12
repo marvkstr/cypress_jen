@@ -1,0 +1,48 @@
+version: '3'
+
+# run Cypress tests and exit with command
+#   docker-compose up --exit-code-from cypress
+services:
+  # this is the web application we are going to test
+  jenkins-docker:
+    build:
+      context: ./
+      dockerfile: jenkins.dk
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    privileged: true
+    ports:
+      - 2376:2376
+    volumes:
+      - jenkins-docker-certs:/certs/client
+      - jenkins-data:/var/jenkins_home
+    networks:
+      jenkins:
+        aliases:
+          - docker
+
+  jenkins-blueocean:
+    build: .
+    privileged: true
+    environment:
+      - DOCKER_CERT_PATH=/certs/client
+      - DOCKER_TLS_VERIFY=1
+      - DOCKER_HOST=tcp://docker:2376
+    ports:
+      - 8080:8080
+      - 50000:50000
+    container_name: jenkins
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - jenkins-docker-certs:/certs/client:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins
+
+
+volumes:
+  jenkins-data:
+  jenkins-docker-certs:
+
+networks:
+  jenkins:
