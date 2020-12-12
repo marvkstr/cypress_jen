@@ -19,7 +19,7 @@ pipeline {
 
     stage('build and push cypress image') {
         steps {
-
+            echo "standing by"
         }
     }
 
