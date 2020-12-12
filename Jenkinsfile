@@ -19,12 +19,7 @@ pipeline {
 
     stage('build and push cypress image') {
         steps {
-            withAWS(credentials: 'aws_credentials', region: "eu-west-1") {
-                docker.withRegistry("https://761841363414.dkr.ecr.eu-west-1.amazonaws.com/jenkins_cypress") {
-                    def image = docker.build("${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${CYPRESS_REPO}:${IMAGE_TAG}", "./cypress.dk")
-                    image.push()
-                }
-            }
+
         }
     }
 
