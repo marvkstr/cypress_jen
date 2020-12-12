@@ -43,7 +43,6 @@ pipeline {
 
     stage('create or update stack') {
       steps {
-        sh 'cat cypress-docker.yml'
         script{
           withAWS(credentials: 'aws-credentials', region: 'eu-west-1') {
             def outputs = cfnUpdate(stack: 'jenkins', template: 'cypress-docker.yaml', params:['StackInfo=githubActionsStack'])
