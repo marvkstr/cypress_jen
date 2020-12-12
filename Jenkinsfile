@@ -29,5 +29,16 @@ pipeline {
         }
       }
     }
+
+    stage('build and push sentimentalyzer image') {
+      steps {
+        script {
+          docker.withRegistry("https://${REGISTRY}/${SENTI_REPO}", "ecr:eu-west-1:aws-credentials") {
+            def image = docker.build("${REGISTRY}/${SENTI_REPO}:${IMAGE_TAG}", "-f ./Dockerfile .")
+            image.push()
+          }
+        }
+      }
+    }
   }
 }
