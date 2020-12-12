@@ -1,13 +1,17 @@
 
-def AWS_REGION = "eu-west-1"
-def AWS_ACCOUNT_ID = "761841363414"
-def CYPRESS_REPO = "jenkins_cypress"
-def SENTI_REPO = "jenkins_sentimentalyzer"
-def IMAGE_TAG = "latest"
 
 pipeline {
   agent any
 
+  environment {
+    AWS_REGION = "eu-west-1"
+    AWS_ACCOUNT_ID = "761841363414"
+    CYPRESS_REPO = "jenkins_cypress"
+    SENTI_REPO = "jenkins_sentimentalyzer"
+    IMAGE_TAG = "latest"
+    REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+    registryCredential = 'ID_OF_MY_AWS_JENKINS_CREDENTIAL'
+  }
   stages {
     stage('e2e') {
       steps {
@@ -18,7 +22,13 @@ pipeline {
 
     stage('build and push cypress image') {
       steps {
-        echo 'standing by'
+        script {
+            docker.withRegistry("https://" + REGISTRY, "ecr:eu-west-1:" + aws-credentials) {
+              def image = docker.build("${REGISTRY}/${CYPRESS_REPO}:${IMAGE_TAG}", "./cypress.dk")
+              image.push()
+            }
+        }
+
       }
     }
 
