@@ -9,6 +9,7 @@ pipeline {
     CYPRESS_REPO = "jenkins_cypress"
     SENTI_REPO = "jenkins_sentimentalyzer"
     IMAGE_TAG = "latest"
+    REGISTRY= "761841363414.dkr.ecr.eu-west-1.amazonaws.com"
   }
   stages {
     stage('e2e') {
