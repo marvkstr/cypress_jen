@@ -114,7 +114,7 @@ Resources:
             - Name: CYPRESS_baseUrl
               Value: http://sentimentalyzer:8080
           Essential: true
-          Image: 761841363414.dkr.ecr.eu-west-1.amazonaws.com/aws_cypress:latest
+          Image: 761841363414.dkr.ecr.eu-west-1.amazonaws.com/jenkins_cypress
           LinuxParameters: { }
           LogConfiguration:
             LogDriver: awslogs
@@ -353,7 +353,7 @@ Resources:
             - Name: PORT
               Value: "8080"
           Essential: true
-          Image: 761841363414.dkr.ecr.eu-west-1.amazonaws.com/aws_sentimentalyzer:latest
+          Image: 761841363414.dkr.ecr.eu-west-1.amazonaws.com/jenkins_sentimentalyzer
           LinuxParameters: { }
           LogConfiguration:
             LogDriver: awslogs
