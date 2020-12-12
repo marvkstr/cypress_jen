@@ -21,7 +21,7 @@ pipeline {
 
     stage('build and push cypress image') {
       steps {
-        sh "sudo apt-get install pass gnupg2"
+        sh "apt-get install pass gnupg2"
         script {
           docker.withRegistry("https://${REGISTRY}/${CYPRESS_REPO}", "ecr:eu-west-1:aws-credentials") {
             def image = docker.build("${REGISTRY}/${CYPRESS_REPO}:${IMAGE_TAG}", "./cypress.dk")
