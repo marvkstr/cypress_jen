@@ -30,9 +30,7 @@ pipeline {
 
     stage ('deploy cloudformation') {
       steps {
-        withAWS(credentials: 'aws_credentials', region: 'us-east-1') {
-          sh 'aws iam get-user'
-        }
+       sh 'aws iam get-user'
       }
     }
   }
