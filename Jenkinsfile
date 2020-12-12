@@ -9,14 +9,11 @@ pipeline {
     CYPRESS_REPO = "jenkins_cypress"
     SENTI_REPO = "jenkins_sentimentalyzer"
     IMAGE_TAG = "latest"
-    REGISTRY = "761841363414.dkr.ecr.eu-west-1.amazonaws.com"
-    registryCredential = 'ID_OF_MY_AWS_JENKINS_CREDENTIAL'
   }
   stages {
     stage('e2e') {
       steps {
         echo 'running e2e-tests'
-        echo "https://${REGISTRY}/${CYPRESS_REPO}"
         sh 'sh e2e_test.sh'
       }
     }
@@ -24,23 +21,11 @@ pipeline {
     stage('build and push cypress image') {
       steps {
         script {
-          docker.withRegistry("https://${REGISTRY}/${CYPRESS_REPO}", "ecr:eu-west-1:${aws-credentials}") {
+          docker.withRegistry("https://${REGISTRY}/${CYPRESS_REPO}", "ecr:eu-west-1:aws-credentials") {
             def image = docker.build("${REGISTRY}/${CYPRESS_REPO}:${IMAGE_TAG}", "./cypress.dk")
             image.push()
           }
         }
-      }
-    }
-
-    stage('push images') {
-      steps {
-        echo 'waiting for instructions'
-      }
-    }
-
-    stage ('deploy cloudformation') {
-      steps {
-       sh 'aws iam get-user'
       }
     }
   }
